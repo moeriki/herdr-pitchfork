@@ -27,6 +27,8 @@ No keys are bound. Bind `pitchfork.start`, `stop`, `restart`, `logs`, `open`, `n
 
 ## Develop
 
+Herdr doesn't notice edits through a symlinked mod folder. Run `node scripts/dev.mjs` while you work: it touches the link on every save so Herdr reloads. After a `git pull`, run `touch -h ~/.config/herdr-app/mods/pitchfork`.
+
 ```sh
 herdr-app check ~/.config/herdr-app/mods/pitchfork
 node --test tests/*.test.mjs
