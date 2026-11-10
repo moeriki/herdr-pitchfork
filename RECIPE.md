@@ -10,8 +10,8 @@ One card filling its block: rounded 10px, 1px `border`, `background` fill, 13px 
 
 - **Header**, 42px, bottom border: "Pitchfork" semibold. A badge (10px, `muted`, 1px border, radius 4) shows `<running>/<total> running` when there are daemons. On the right is a segmented switch, **Worktree | All**: 22px segments, 11px text, the active one on `raised` in `foreground`, the other `dim`.
 - **List**, scrolling, 6px padding. One row per daemon, 10px by 8px padding, radius 7, `selected` fill on the selected row and `hover` on hover:
-  - Line 1: a 7px status dot, the daemon's short name (semibold, truncated) and its status on the right (11px), in the same colour as the dot.
-  - Line 2 (11px, `dim`, indented 15px): `:port · pid N · oneshot` (whichever are known), then the URL without its scheme, truncated.
+  - Line 1: a 7px status dot, the daemon's short name (semibold, truncated), then `oneshot` and `disabled` badges when they apply (the header badge's style). On the right: its uptime in `dim` (like `1h 25m`, from `ps -o etime`), then its status (11px) in the dot's colour, so the status column stays aligned.
+  - Line 2 (11px, indented 15px): the URL without its scheme (truncated) and `:active_port` unless the URL already ends in it, both `muted`; `pid N` in `dim` on the right.
   - The daemon's error, if any, in `blocked`.
   - Buttons (24px, radius 6, 11px): **Start**, filled `solid`; or **Stop** and **Restart**, outlined. Then **Logs ↗**, and **Open ↗** while the daemon runs and has a URL: its proxy URL, else `http://localhost:<active_port>` (labelled "Remote URL" on another machine).
 - **Namespace headers**, shown in All view or when there is more than one namespace: the namespace in 13px semibold `foreground`, with a `running/total` badge that is `done` when anything runs and `muted` otherwise. Every header after the first has a 1px top border, so the groups read as blocks.
@@ -38,7 +38,7 @@ One card filling its block: rounded 10px, 1px `border`, `background` fill, 13px 
 - `mod.json` `{"place":"right","size":360}`: Herdr docks it on the right the first time it sees the folder. A layout can instead place it as a block, e.g. in the right-hand panel stack beside `files` and `changes`. Props: `binary` (optional absolute path to `pitchfork`, used only locally).
 - `herdr`: `focused`, `spaces`, `theme`, `exec` (with `on: space.machine`), `hc`, `home`, `props`, `notify`, `nextCommand`, `run` (`tab.select`, `tab.rename`).
 - **Log tabs:** `hc run --bg --no-parent --cwd <root> [--on <machine>] --label herdr.space=<space> --label herdr.tab=pflogs-<space tail>-<id> --label pitchfork.logs=<id> -- pitchfork logs …`. Herdr adopts a terminal labelled with an unknown tab id as a new tab under exactly that id, so the id is how the panel finds the tab again.
-- **Programs run:** `pitchfork` (through `env` for polls), `sh` (remote `$HOME` only), `hc`, `open` / `xdg-open`.
+- **Programs run:** `pitchfork` (through `env` for polls), `ps` (uptime of running pids), `sh` (remote `$HOME` only), `hc`, `open` / `xdg-open`.
 
 ## Watch out
 

@@ -66,7 +66,7 @@ export default class Pitchfork extends View {
           root = context.cwd;
         }
         const target = { root, machine: context.machine, all: context.all, space: context.space };
-        const rows = await snapshot(execute, target);
+        const rows = await snapshot(execute, target, { uptime: true });
         if (!current()) return;
         this.target = target; this.rows = rows;
         if (!rows.some(r => r.id === this.selected)) this.selected = rows[0]?.id ?? null;
@@ -202,18 +202,25 @@ export default class Pitchfork extends View {
   daemonRow(row, t) {
     const pending = this.pending[row.id];
     const color = pending ? t.accent : row.status === 'running' ? t.done : ['failed', 'errored'].includes(row.status) ? t.blocked : t.dim;
-    const meta = [row.active_port ? ':' + row.active_port : '', row.pid ? 'pid ' + row.pid : '', row.oneshot ? 'oneshot' : ''].filter(Boolean).join(' · ');
-    const url = daemonUrl(row);
+    const link = daemonUrl(row)?.replace(/^https?:\/\//, '');
+    const port = row.active_port && !link?.endsWith(':' + row.active_port) ? ':' + row.active_port : '';
+    const badge = text => div().flex_none().px(5).py(1).rounded(4).border_1().border_color(t.border).text_size(10).text_color(t.muted).child(text);
     return v_flex().id('pf-row-' + row.id).flex_none().px(10).py(8).gap(6).rounded(7).cursor_pointer()
       .when(row.id === this.selected, el => el.bg(t.selected)).hover(s => s.bg(t.hover))
       .on_click((_e, cx) => { this.selected = row.id; cx.notify(); })
       .child(h_flex().gap(8).items_center()
         .child(div().size(7).flex_none().rounded(4).bg(color).when(!!pending, el => el.loop('opacity', { from: 0.3, to: 1, period: 900 })))
-        .child(div().flex_1().min_w(0).truncate().font_semibold().child(row.name || row.id.split('/').pop()))
+        .child(div().flex_shrink_1().min_w(0).truncate().font_semibold().child(row.name || row.id.split('/').pop()))
+        .when(!!row.oneshot, el => el.child(badge('oneshot')))
+        .when(!!row.disabled, el => el.child(badge('disabled')))
+        .child(div().flex_1())
+        .when(!!row.uptime && !pending, el => el.child(div().flex_none().text_size(11).text_color(t.dim).child(row.uptime)))
         .child(div().flex_none().text_size(11).text_color(color).child(pending ? pending + '…' : row.status)))
-      .when(!!(meta || url), el => el.child(h_flex().pl(15).gap(6).text_size(11).text_color(t.dim)
-        .when(!!meta, el => el.child(div().flex_none().child(meta + (url ? ' ·' : ''))))
-        .when(!!url, el => el.child(div().flex_1().min_w(0).truncate().child(url.replace(/^https?:\/\//, ''))))))
+      .when(!!(link || port || row.pid), el => el.child(h_flex().pl(15).gap(6).text_size(11)
+        .when(!!link, el => el.child(div().flex_shrink_1().min_w(0).truncate().text_color(t.muted).child(link)))
+        .when(!!port, el => el.child(div().flex_none().text_color(t.muted).child(port)))
+        .child(div().flex_1())
+        .when(!!row.pid, el => el.child(div().flex_none().text_color(t.dim).child('pid ' + row.pid)))))
       .when(!!row.error, el => el.child(div().pl(15).text_size(11).text_color(t.blocked).child(String(row.error))))
       .child(div().pl(15).child(this.daemonControls(row, t)));
   }

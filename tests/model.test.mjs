@@ -5,7 +5,7 @@ import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 const source = await readFile(new URL('../mods/pitchfork/model.js', import.meta.url), 'utf8');
-const { decode, disposition, snapshot, control, daemonUrl } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
+const { decode, disposition, snapshot, control, daemonUrl, formatElapsed } = await import('data:text/javascript;base64,' + Buffer.from(source).toString('base64'));
 const target = {root:'/sample/worktree',machine:null,all:false};
 const row = {id:'sample/web',name:'web',status:'stopped'};
 const output = rows => ({code:0,stdout:JSON.stringify(rows),stderr:''});
@@ -20,6 +20,15 @@ test('Open needs a running daemon and falls back to its port',()=>{
   assert.equal(daemonUrl({status:'stopped',proxy_url:'https://web.localhost'}),null);
   assert.equal(daemonUrl({status:'running',active_port:3000}),'http://localhost:3000');
   assert.equal(daemonUrl({status:'running',proxy_url:'https://web.localhost',active_port:3000}),'https://web.localhost');
+});
+test('uptime reads ps etime for running pids only',async()=>{
+  const calls=[];
+  const rows=await snapshot(async(cmd,args)=>{calls.push([cmd,args]);return cmd==='ps'?{code:1,stdout:'  42   01:25:03\n',stderr:''}:output([{...row,status:'running',pid:42},{...row,id:'sample/gone',status:'running',pid:7},row]);},target,{uptime:true});
+  assert.deepEqual(calls[1],['ps',['-o','pid=,etime=','-p','42,7']]);
+  assert.deepEqual(rows.map(r=>r.uptime),['1h 25m',undefined,undefined]);
+});
+test('elapsed time formats like the Pitchfork TUI',()=>{
+  assert.deepEqual(['00:42','05:09','15:29:00','2-03:04:05'].map(formatElapsed),['42s','5m','15h 29m','2d 3h']);
 });
 test('bad JSON, exit failure and unexpected schema fail closed',()=>{
   assert.throws(()=>decode({code:1,stderr:'unavailable',stdout:''}),/unavailable/);

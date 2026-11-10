@@ -20,11 +20,24 @@ export function disposition(action, row) {
   return 'run';
 }
 
-export async function snapshot(execute, target) {
+export async function snapshot(execute, target, { uptime = false } = {}) {
   // A poll must not spawn a supervisor with Herdr's environment; starting one is the user's call.
-  return decode(await execute('pitchfork', ['list', '--json', ...(target.all ? [] : ['--project'])], {
+  const rows = decode(await execute('pitchfork', ['list', '--json', ...(target.all ? [] : ['--project'])], {
     cwd: target.root, on: target.machine, autostart: false,
   }));
+  const pids = rows.filter(row => row.status === 'running' && Number.isInteger(row.pid)).map(row => row.pid);
+  if (!uptime || !pids.length) return rows;
+  // ps exits non-zero when any pid is gone but still prints the rest.
+  const ps = await execute('ps', ['-o', 'pid=,etime=', '-p', pids.join(',')], { cwd: target.root, on: target.machine }).catch(() => null);
+  const elapsed = new Map((ps?.stdout || '').split('\n').map(line => line.trim().split(/\s+/)).filter(([pid, e]) => pid && e).map(([pid, e]) => [Number(pid), e]));
+  return rows.map(row => elapsed.has(row.pid) ? { ...row, uptime: formatElapsed(elapsed.get(row.pid)) } : row);
+}
+
+export function formatElapsed(etime) {
+  const [days, clock] = etime.includes('-') ? etime.split('-') : ['0', etime];
+  const [s, m = 0, h = 0] = clock.split(':').reverse().map(Number);
+  const d = Number(days);
+  return d ? `${d}d ${h}h` : h ? `${h}h ${m}m` : m ? `${m}m` : `${s}s`;
 }
 
 export function namespaceOf(row) {
